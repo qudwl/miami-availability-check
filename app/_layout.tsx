@@ -1,10 +1,9 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { PaperProvider } from "react-native-paper";
-import { useFonts } from "expo-font";
 import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
-import { useColorScheme } from "react-native";
-import Home from ".";
+import { useFonts } from "expo-font";
+import { TamaguiProvider } from "tamagui";
+import appConfig from "../tamagui.config";
+import { TamaguiSafeAreaView } from "../components/TamaguiSafeAreaView";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -20,14 +19,10 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    ...FontAwesome.font,
+  const [loaded] = useFonts({
+    Inter: require("@tamagui/font-inter/otf/Inter-Medium.otf"),
+    InterBold: require("@tamagui/font-inter/otf/Inter-Bold.otf"),
   });
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
 
   useEffect(() => {
     if (loaded) {
@@ -44,10 +39,12 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   return (
-    <PaperProvider>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-      </Stack>
-    </PaperProvider>
+    <TamaguiProvider config={appConfig}>
+      <TamaguiSafeAreaView>
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+        </Stack>
+      </TamaguiSafeAreaView>
+    </TamaguiProvider>
   );
 }

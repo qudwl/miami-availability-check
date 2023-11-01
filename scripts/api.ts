@@ -1,10 +1,12 @@
 import Time from "../model/Time";
 import Schedule from "../model/Schedule";
 import Course from "../model/Course";
+import TermInfo from "../model/TermInfo";
 
 const url = "https://ws.apps.miamioh.edu/api/"; // API URL
 const termAPI = "academicTerm/v2?numOfFutureTerms=2&numOfPastTerms=2"; // API to get Terms
-const curCourses = "courseSection/v3/courseSection?campusCode=O&termCode="; // API to get Courses
+const curCourses =
+  "courseSection/v3/courseSection?campusCode=O&limit=20&termCode="; // API to get Courses
 const composeObjects =
   "&compose=%2Cschedules%2Cinstructors%2Cattributes%2CcrossListedCourseSections%2CenrollmentDistribution";
 
@@ -16,21 +18,21 @@ const composeObjects =
  * @returns
  */
 const getDeptData = async (
-  term = 202310,
-  dept = "CSE",
+  term: string,
+  dept: string,
   offset = 0
 ): Promise<[boolean, Course[]]> => {
   const courses: Course[] = new Array<Course>();
   // Get the course data from the API
-  const courseData = await fetch(
+  const apiURL =
     url +
-      curCourses +
-      term +
-      (offset === 0 ? "" : "&offset=" + offset * 50) +
-      composeObjects +
-      "&course_subjectCode=" +
-      dept
-  );
+    curCourses +
+    term +
+    (offset === 0 ? "" : "&offset=" + (offset * 20 + 1)) +
+    composeObjects +
+    "&course_subjectCode=" +
+    dept;
+  const courseData = await fetch(apiURL);
   // Convert to JSON
   const courseJson = await courseData.json();
   for (let course of courseJson.data) {
@@ -39,7 +41,7 @@ const getDeptData = async (
       courses.push(formatted);
     }
   }
-  return [courseJson.data.length == 50, courses];
+  return [courseJson.data.length == 20, courses];
 };
 
 /**
@@ -133,4 +135,20 @@ const stringToTime = (time: string): Time => {
   return new Time(parseInt(split[0]), parseInt(split[1]));
 };
 
-export default getDeptData;
+const getTerm = async (): Promise<TermInfo[]> => {
+  const termData = await fetch(url + termAPI);
+  const termJson = await termData.json();
+
+  const terms: TermInfo[] = new Array<TermInfo>();
+  for (let term of termJson.data) {
+    if (term.displayTerm) {
+      terms.push(
+        new TermInfo(term.termId, term.name, term.startDate, term.endDate)
+      );
+    }
+  }
+
+  return terms;
+};
+
+export { getDeptData, getTerm };
