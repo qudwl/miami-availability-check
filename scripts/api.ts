@@ -19,7 +19,7 @@ const composeObjects =
  * @returns
  */
 const getDeptData = async (
-  term: string,
+  term: number,
   dept: string,
   offset = 0
 ): Promise<[boolean, Course[]]> => {

@@ -57,4 +57,10 @@ const getSavedCourses = async () => {
   return arr;
 };
 
-export { init, insertCourse, getCRNs, getSavedCourses };
+const deleteCourse = (crn: number) => {
+  coursesDB.transaction((tx) => {
+    tx.executeSql(`DELETE FROM courses WHERE crn = ?;`, [crn]);
+  });
+};
+
+export { init, insertCourse, getCRNs, getSavedCourses, deleteCourse };

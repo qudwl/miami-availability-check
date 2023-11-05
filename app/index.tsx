@@ -14,6 +14,7 @@ import {
 import CourseSheet from "../components/CourseSheet";
 import { init } from "../storage/sqlite";
 import ToastComponent from "../components/ToastComponent";
+import useStore from "../model/store";
 
 const findCurrentTerm = (terms: TermInfo[]): TermInfo => {
   let curDate = new Date();
@@ -24,7 +25,6 @@ const findCurrentTerm = (terms: TermInfo[]): TermInfo => {
       break;
     }
   }
-
   return curTerm;
 };
 
@@ -32,19 +32,20 @@ const Home = () => {
   const [searchValue, setSearchValue] = useState("");
   const [canLoadMore, setCanLoadMore] = useState(false);
   const [offset, setOffset] = useState(0);
-  const [curTerm, setCurTerm] = useState<TermInfo>();
   const [data, setData] = useState<Course[]>();
   const [isLoading, setIsLoading] = useState(false);
   const [firstPageReceived, setFirstPageReceived] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [openSheet, setOpenSheet] = useState(false);
   const onChangeSearch = (query: string) => setSearchValue(query);
+  const { setCurrentTerm, setTerms, currentTerm, campus, setCampus } =
+    useStore();
 
   // Fetch more data when user scrolls to the bottom of the list.
   const fetchNextPage = () => {
-    if (firstPageReceived && canLoadMore && curTerm != undefined) {
+    if (firstPageReceived && canLoadMore && currentTerm != undefined) {
       setIsLoading(true);
-      getDeptData(curTerm.id, searchValue, offset).then((res) => {
+      getDeptData(currentTerm.id, searchValue, offset).then((res) => {
         if (data == undefined) setData(res[1]);
         else setData([...data, ...res[1]]);
         if (res[0]) {
@@ -63,30 +64,47 @@ const Home = () => {
   useEffect(() => {
     init();
     checkIfSupportsSecureStore().then((check) => {
+      let haveToReset = true;
+      let hasCampus = false;
       if (check) {
-        getItem("curTerm").then((term) => {
-          if (term == null) {
-            getTerm().then((data) => {
-              const tmp = findCurrentTerm(data);
-              setCurTerm(tmp);
-              saveItem("curTerm", JSON.stringify(tmp));
-            });
-          } else {
+        getItem("currentTerm").then((term) => {
+          if (term != null) {
             const parsed = JSON.parse(term);
-            setCurTerm(parsed);
+            haveToReset = false;
+            setCurrentTerm(parsed);
           }
         });
+        getItem("campus").then((campus) => {
+          if (campus != null) {
+            const parsed = JSON.parse(campus);
+            setCampus(parsed);
+            hasCampus = true;
+          }
+        });
+      }
+      getTerm().then((data) => {
+        const tmp = findCurrentTerm(data);
+        setTerms(data);
+
+        if (haveToReset) {
+          setCurrentTerm(tmp);
+          saveItem("currentTerm", JSON.stringify(tmp));
+        }
+      });
+      if (!hasCampus) {
+        setCampus("o");
+        saveItem("campus", JSON.stringify("o"));
       }
     });
   }, []);
 
   // Fetch data when search value changes.
   useEffect(() => {
-    if (searchValue != "" && curTerm != undefined) {
+    if (searchValue != "" && currentTerm != undefined) {
       setFirstPageReceived(false);
       setData([]);
       setIsLoading(true);
-      getDeptData(curTerm.id, searchValue).then((res) => {
+      getDeptData(currentTerm.id, searchValue).then((res) => {
         setData(res[1]);
         if (res[0]) {
           setCanLoadMore(true);
@@ -100,11 +118,13 @@ const Home = () => {
         setIsLoading(false);
       });
     }
-  }, [searchValue, curTerm]);
+  }, [searchValue]);
 
   return (
     <YStack margin={10} space>
-      <H4 textAlign="center">{curTerm != undefined ? curTerm.label : ""}</H4>
+      <H4 textAlign="center">
+        {currentTerm != undefined ? currentTerm.label : ""}
+      </H4>
       <DepartmentSelect
         searchTerm={searchValue}
         setSearchTerm={setSearchValue}

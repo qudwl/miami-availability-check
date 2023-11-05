@@ -1,10 +1,10 @@
 class TermInfo {
-  id: string;
+  id: number;
   label: string;
   startDate: Date;
   endDate: Date;
 
-  constructor(id: string, label: string, startDate: string, endDate: string) {
+  constructor(id: number, label: string, startDate: string, endDate: string) {
     this.id = id;
     this.label = label;
     this.startDate = new Date(startDate);
