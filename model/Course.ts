@@ -3,18 +3,20 @@ import Schedule from "./Schedule";
 class Course {
   subject: string;
   cid: number;
-  crn: string;
+  crn: number;
   title: string;
   instructors: string;
   section: string;
   credits: number;
+  description: string;
   times: Schedule[];
 
   constructor(
     subject: string,
     cid: number,
-    crn: string,
+    crn: number,
     title: string,
+    description: string,
     instructors: string,
     section: string,
     credits: number,
@@ -24,6 +26,7 @@ class Course {
     this.cid = cid;
     this.crn = crn;
     this.title = title;
+    this.description = description;
     this.instructors = instructors;
     this.section = section;
     this.credits = credits;

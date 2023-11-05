@@ -1,10 +1,19 @@
-import { Card, H4, Paragraph, YStack, Spinner } from "tamagui";
+import { H4, YStack, Spinner } from "tamagui";
 import React, { useState, useEffect } from "react";
 import { getDeptData, getTerm } from "../scripts/api";
 import { FlatList } from "react-native-gesture-handler";
 import Course from "../model/Course";
 import DepartmentSelect from "../components/DepartmentSelect";
 import TermInfo from "../model/TermInfo";
+import ListCardItem from "../components/ListCardItem";
+import {
+  checkIfSupportsSecureStore,
+  getItem,
+  saveItem,
+} from "../storage/preferences";
+import CourseSheet from "../components/CourseSheet";
+import { init } from "../storage/sqlite";
+import ToastComponent from "../components/ToastComponent";
 
 const findCurrentTerm = (terms: TermInfo[]): TermInfo => {
   let curDate = new Date();
@@ -27,8 +36,11 @@ const Home = () => {
   const [data, setData] = useState<Course[]>();
   const [isLoading, setIsLoading] = useState(false);
   const [firstPageReceived, setFirstPageReceived] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [openSheet, setOpenSheet] = useState(false);
   const onChangeSearch = (query: string) => setSearchValue(query);
 
+  // Fetch more data when user scrolls to the bottom of the list.
   const fetchNextPage = () => {
     if (firstPageReceived && canLoadMore && curTerm != undefined) {
       setIsLoading(true);
@@ -47,16 +59,32 @@ const Home = () => {
     }
   };
 
+  // Find current term.
   useEffect(() => {
-    console.log(2);
-    getTerm().then((data) => {
-      setCurTerm(findCurrentTerm(data));
+    init();
+    checkIfSupportsSecureStore().then((check) => {
+      if (check) {
+        getItem("curTerm").then((term) => {
+          if (term == null) {
+            getTerm().then((data) => {
+              const tmp = findCurrentTerm(data);
+              setCurTerm(tmp);
+              saveItem("curTerm", JSON.stringify(tmp));
+            });
+          } else {
+            const parsed = JSON.parse(term);
+            setCurTerm(parsed);
+          }
+        });
+      }
     });
   }, []);
 
+  // Fetch data when search value changes.
   useEffect(() => {
-    console.log(1);
     if (searchValue != "" && curTerm != undefined) {
+      setFirstPageReceived(false);
+      setData([]);
       setIsLoading(true);
       getDeptData(curTerm.id, searchValue).then((res) => {
         setData(res[1]);
@@ -75,8 +103,8 @@ const Home = () => {
   }, [searchValue, curTerm]);
 
   return (
-    <YStack margin={10}>
-      <H4>{curTerm != undefined ? curTerm.label : ""}</H4>
+    <YStack margin={10} space>
+      <H4 textAlign="center">{curTerm != undefined ? curTerm.label : ""}</H4>
       <DepartmentSelect
         searchTerm={searchValue}
         setSearchTerm={setSearchValue}
@@ -86,17 +114,19 @@ const Home = () => {
         onEndReachedThreshold={0.8}
         style={{ height: "80%" }}
         data={data}
-        renderItem={({ item }) => {
-          return (
-            <Card style={{ marginTop: 10, marginBottom: 10 }}>
-              <Card.Header padded>
-                <H4>{`${item.subject} ${item.cid} ${item.section}`}</H4>
-                <Paragraph theme="alt2">{item.title}</Paragraph>
-              </Card.Header>
-            </Card>
-          );
-        }}
+        renderItem={({ item }) => (
+          <ListCardItem
+            item={item}
+            setOpen={setOpenSheet}
+            setCourse={setSelectedCourse}
+          />
+        )}
         ListFooterComponent={isLoading ? <Spinner size="large" /> : <></>}
+      />
+      <CourseSheet
+        course={selectedCourse}
+        open={openSheet}
+        setOpen={setOpenSheet}
       />
     </YStack>
   );

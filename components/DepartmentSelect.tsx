@@ -58,15 +58,13 @@ const DepartmentSelect = ({ searchTerm, setSearchTerm }: Props) => {
             />
           </Select.ScrollUpButton>
           <Select.Viewport
-            // to do animations:
-            // animation="quick"
-            // animateOnly={['transform', 'opacity']}
-            // enterStyle={{ o: 0, y: -10 }}
-            // exitStyle={{ o: 0, y: 10 }}
+            animation="quick"
+            animateOnly={["transform", "opacity"]}
+            enterStyle={{ o: 0, y: -10 }}
+            exitStyle={{ o: 0, y: 10 }}
             minWidth={200}
           >
             <Select.Group>
-              {/* for longer lists memoizing these is useful */}
               {useMemo(
                 () =>
                   departments.map((item, i) => {

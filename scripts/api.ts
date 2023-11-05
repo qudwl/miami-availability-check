@@ -7,6 +7,7 @@ const url = "https://ws.apps.miamioh.edu/api/"; // API URL
 const termAPI = "academicTerm/v2?numOfFutureTerms=2&numOfPastTerms=2"; // API to get Terms
 const curCourses =
   "courseSection/v3/courseSection?campusCode=O&limit=20&termCode="; // API to get Courses
+const crnCourses = "courseSection/v3/courseSection?crn="; // API to get Courses from CRN
 const composeObjects =
   "&compose=%2Cschedules%2Cinstructors%2Cattributes%2CcrossListedCourseSections%2CenrollmentDistribution";
 
@@ -36,6 +37,7 @@ const getDeptData = async (
   // Convert to JSON
   const courseJson = await courseData.json();
   for (let course of courseJson.data) {
+    console.log(course);
     let formatted = formatCourse(course);
     if (formatted != null) {
       courses.push(formatted);
@@ -44,21 +46,51 @@ const getDeptData = async (
   return [courseJson.data.length == 20, courses];
 };
 
+const getCourseFromCRN = async (term: string, crn: string): Promise<Course> => {
+  const apiURL = url + crnCourses + crn + "&termCode=" + term + composeObjects;
+  const courseData = await fetch(apiURL);
+  const courseJson = await courseData.json();
+  const course = courseJson.data[0];
+  const formatted = formatCourse(course);
+  if (formatted == null) {
+    throw new Error("Course not found!");
+  }
+  return formatted;
+};
+
 /**
  * Format the course data into a Course object
  * @param course
  * @returns a Course object.
  */
 const formatCourse = (course: {
-  isDisplayed: any;
+  isDisplayed: boolean;
   instructors: any;
-  schedules: { days: string | null; startTime: string; endTime: string }[];
-  course: { subjectCode: any; number: any; title: any; creditHoursHigh: any };
-  crn: any;
-  courseSectionCode: any;
+  schedules: {
+    days: string | null;
+    startTime: string;
+    endTime: string;
+    buildingName: string;
+    buildingCode: string;
+  }[];
+  course: {
+    subjectCode: any;
+    number: any;
+    description: string;
+    title: any;
+    creditHoursHigh: any;
+  };
+  crn: string;
+  courseSectionCode: string;
+  courseSectionStatusCode: string;
 }): Course | null => {
   // Check if the course is displayed
   if (!course.isDisplayed) {
+    return null;
+  }
+
+  // Check if the course is active
+  if (course.courseSectionStatusCode != "A") {
     return null;
   }
 
@@ -74,14 +106,26 @@ const formatCourse = (course: {
   // Convert the times to Schedule objects
   const times: Schedule[] = new Array<Schedule>();
   course.schedules.forEach(
-    (time: { days: string | null; startTime: string; endTime: string }) => {
+    (time: {
+      days: string | null;
+      startTime: string;
+      endTime: string;
+      buildingName: string;
+      buildingCode: string;
+    }) => {
       if (time.days == null) {
         return;
       }
       const startTime: Time = stringToTime(time.startTime);
       const endTime: Time = stringToTime(time.endTime);
       for (let day of time.days.split("")) {
-        const timeObj = new Schedule(startTime, endTime, getDay(day));
+        const timeObj = new Schedule(
+          startTime,
+          endTime,
+          getDay(day),
+          time.buildingName,
+          time.buildingCode
+        );
         times.push(timeObj);
       }
     }
@@ -91,8 +135,9 @@ const formatCourse = (course: {
   const courseData = new Course(
     course.course.subjectCode,
     course.course.number,
-    course.crn,
+    parseInt(course.crn),
     course.course.title,
+    course.course.description,
     instructor,
     course.courseSectionCode,
     course.course.creditHoursHigh,
@@ -151,4 +196,4 @@ const getTerm = async (): Promise<TermInfo[]> => {
   return terms;
 };
 
-export { getDeptData, getTerm };
+export { getDeptData, getTerm, getCourseFromCRN };
