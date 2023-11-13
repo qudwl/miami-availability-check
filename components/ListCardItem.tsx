@@ -1,4 +1,4 @@
-import { Card, H4, Paragraph, XStack, YStack } from "tamagui";
+import { Card, Circle, H4, Paragraph, XStack, YStack } from "tamagui";
 import Course from "../model/Course";
 import { router } from "expo-router";
 
@@ -25,12 +25,21 @@ const ListCardItem = ({ item, setOpen, setCourse }: Props) => {
             <H4>{`${item.subject} ${item.cid} ${item.section}`}</H4>
             <Paragraph theme="alt1">{item.title}</Paragraph>
           </YStack>
-          <YStack>
+          <YStack justifyContent="center">
+            <Paragraph
+              color={
+                item.currentEnrollment < item.maxEnrollment ? "green" : "red"
+              }
+              textAlign="right"
+            >
+              {item.currentEnrollment} / {item.maxEnrollment}
+            </Paragraph>
             {item.times.length > 0 ? (
               item.times.map((time, index) => {
+                console.log(time);
                 return (
-                  <Paragraph key={index} theme="alt2">
-                    {`${days[time.day]} ${time.start.time}-${time.end.time}`}
+                  <Paragraph key={index} theme="alt2" textAlign="right">
+                    {`${time.day} ${time.start}-${time.end}`}
                   </Paragraph>
                 );
               })

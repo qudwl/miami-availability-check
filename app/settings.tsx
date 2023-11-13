@@ -7,44 +7,50 @@ import {
   Select,
   Adapt,
   Sheet,
-  AlertDialog,
   Button,
   RadioGroup,
 } from "tamagui";
-import { Check, ChevronDown, ChevronUp, Radio } from "@tamagui/lucide-icons";
+import { Check, ChevronDown, ChevronUp } from "@tamagui/lucide-icons";
 import { LinearGradient } from "tamagui/linear-gradient";
 import { useEffect, useState } from "react";
 import useStore from "../model/store";
-import TermInfo from "../model/TermInfo";
-import { router } from "expo-router";
 import RadioGroupButton from "../components/RadioGroupButton";
+import { deleteAll } from "../storage/sqlite";
+import { router } from "expo-router";
+import { saveItem } from "../storage/preferences";
 
 const Settings = () => {
   const { terms, currentTerm, campus, setCurrentTerm } = useStore();
   const [selectedTerm, setSelectedTerm] = useState(0);
   const [selectedCampus, setSelectedCampus] = useState(campus);
-  const [changeTermAlert, setChangeTermAlert] = useState(false);
+  const store = useStore();
 
   useEffect(() => {
     setSelectedTerm(currentTerm.id);
+    setSelectedCampus(campus);
     console.log(selectedTerm);
   }, [terms]);
 
-  const openAlert = (termId: number) => {
+  const acceptTermChange = (termIdStr: string) => {
+    const termId = parseInt(termIdStr);
     const term = terms.find((term) => term.id == termId);
     if (term != currentTerm) {
       setSelectedTerm(termId);
-      setChangeTermAlert(true);
+      setCurrentTerm(term!);
+      acceptDeleteAll();
     }
   };
 
-  const acceptTermChange = () => {
-    const term = terms.find((term) => term.id == selectedTerm);
-    if (term != null) {
-      setCurrentTerm(term);
-      setChangeTermAlert(false);
-      router.push("/");
-    }
+  const acceptCampusChange = () => {
+    store.setCampus(selectedCampus);
+    saveItem("campus", selectedCampus);
+    acceptDeleteAll();
+  };
+
+  const acceptDeleteAll = () => {
+    deleteAll();
+    store.setSavedClasses([]);
+    router.push("/");
   };
 
   return (
@@ -54,7 +60,11 @@ const Settings = () => {
         <Card.Header padded>
           <YStack space>
             <Label>Change Term</Label>
-            <Select value={selectedTerm} onValueChange={openAlert} size="$6">
+            <Select
+              value={selectedTerm.toString()}
+              onValueChange={acceptTermChange}
+              size="$6"
+            >
               <Select.Trigger iconAfter={ChevronDown}>
                 <Select.Value placeholder="Change Term" />
               </Select.Trigger>
@@ -114,7 +124,7 @@ const Settings = () => {
                               debug="verbose"
                               index={i}
                               key={item.id}
-                              value={item.id}
+                              value={item.id.toString()}
                             >
                               <Select.ItemText>{item.label}</Select.ItemText>
                               <Select.ItemIndicator marginLeft="auto">
@@ -157,65 +167,28 @@ const Settings = () => {
             <RadioGroup
               value={selectedCampus}
               onValueChange={setSelectedCampus}
-              defaultValue="o"
             >
               <YStack space>
-                <RadioGroupButton value="o" label="Oxford" />
-                <RadioGroupButton value="h" label="Hamilton" />
+                <RadioGroupButton value="O" label="Oxford" />
+                <RadioGroupButton value="H" label="Hamilton" />
+                <RadioGroupButton value="M" label="Middletown" />
+                <RadioGroupButton value="L" label="Luxembourg" />
               </YStack>
             </RadioGroup>
-            <Button theme="active">Save</Button>
+            <Button theme="active" onPress={acceptCampusChange}>
+              Save
+            </Button>
           </YStack>
         </Card.Header>
       </Card>
-      <AlertDialog open={changeTermAlert} onOpenChange={setChangeTermAlert}>
-        <AlertDialog.Portal>
-          <AlertDialog.Overlay
-            key="overlay"
-            animation="quick"
-            opacity={0.5}
-            enterStyle={{ opacity: 0 }}
-            exitStyle={{ opacity: 0 }}
-          />
-          <AlertDialog.Content
-            bordered
-            elevate
-            key="content"
-            animation={[
-              "quick",
-              {
-                opacity: {
-                  overshootClamping: true,
-                },
-              },
-            ]}
-            enterStyle={{ x: 0, y: -20, opacity: 0, scale: 0.9 }}
-            exitStyle={{ x: 0, y: 10, opacity: 0, scale: 0.95 }}
-            x={0}
-            scale={1}
-            opacity={1}
-            y={0}
-          >
-            <YStack space>
-              <AlertDialog.Title>Change Term</AlertDialog.Title>
-              <AlertDialog.Description>
-                Would you like to change the term to{" "}
-                {terms.find((term) => term.id == selectedTerm)?.label}?
-              </AlertDialog.Description>
-              <XStack space>
-                <AlertDialog.Cancel asChild>
-                  <Button>Cancel</Button>
-                </AlertDialog.Cancel>
-                <AlertDialog.Action>
-                  <Button theme="active" onPress={acceptTermChange}>
-                    Change
-                  </Button>
-                </AlertDialog.Action>
-              </XStack>
-            </YStack>
-          </AlertDialog.Content>
-        </AlertDialog.Portal>
-      </AlertDialog>
+      <Card>
+        <Card.Header>
+          <YStack space>
+            <Label>Delete All Information</Label>
+            <Button onPress={acceptDeleteAll}>Delete</Button>
+          </YStack>
+        </Card.Header>
+      </Card>
     </YStack>
   );
 };

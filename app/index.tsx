@@ -12,7 +12,7 @@ import {
   saveItem,
 } from "../storage/preferences";
 import CourseSheet from "../components/CourseSheet";
-import { init } from "../storage/sqlite";
+import { getDBClasses, init, insertCourse } from "../storage/sqlite";
 import ToastComponent from "../components/ToastComponent";
 import useStore from "../model/store";
 
@@ -38,8 +38,15 @@ const Home = () => {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [openSheet, setOpenSheet] = useState(false);
   const onChangeSearch = (query: string) => setSearchValue(query);
-  const { setCurrentTerm, setTerms, currentTerm, campus, setCampus } =
-    useStore();
+  const {
+    setCurrentTerm,
+    setTerms,
+    currentTerm,
+    campus,
+    savedClasses,
+    setCampus,
+    setSavedClasses,
+  } = useStore();
 
   // Fetch more data when user scrolls to the bottom of the list.
   const fetchNextPage = () => {
@@ -58,6 +65,14 @@ const Home = () => {
         setIsLoading(false);
       });
     }
+  };
+
+  const sheetAction = {
+    label: "Add Course",
+    onPress: (course: Course) => {
+      insertCourse(course);
+      setSavedClasses([...savedClasses, course]);
+    },
   };
 
   // Find current term.
@@ -92,9 +107,12 @@ const Home = () => {
         }
       });
       if (!hasCampus) {
-        setCampus("o");
-        saveItem("campus", JSON.stringify("o"));
+        setCampus("O");
+        saveItem("campus", "O");
       }
+    });
+    getDBClasses().then((res) => {
+      setSavedClasses(res);
     });
   }, []);
 
@@ -147,6 +165,7 @@ const Home = () => {
         course={selectedCourse}
         open={openSheet}
         setOpen={setOpenSheet}
+        action={sheetAction}
       />
     </YStack>
   );

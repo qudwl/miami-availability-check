@@ -5,10 +5,12 @@ class Course {
   cid: number;
   crn: number;
   title: string;
-  instructors: string;
+  instructor: string;
   section: string;
   credits: number;
   description: string;
+  maxEnrollment: number;
+  currentEnrollment: number;
   times: Schedule[];
 
   constructor(
@@ -17,9 +19,11 @@ class Course {
     crn: number,
     title: string,
     description: string,
-    instructors: string,
+    instructor: string,
     section: string,
     credits: number,
+    maxEnrollment: number,
+    currentEnrollment: number,
     times: Schedule[]
   ) {
     this.subject = subject;
@@ -27,10 +31,12 @@ class Course {
     this.crn = crn;
     this.title = title;
     this.description = description;
-    this.instructors = instructors;
+    this.instructor = instructor;
     this.section = section;
     this.credits = credits;
     this.times = times;
+    this.maxEnrollment = maxEnrollment;
+    this.currentEnrollment = currentEnrollment;
   }
 }
 

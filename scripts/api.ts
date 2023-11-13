@@ -1,15 +1,15 @@
-import Time from "../model/Time";
 import Schedule from "../model/Schedule";
 import Course from "../model/Course";
 import TermInfo from "../model/TermInfo";
 
 const url = "https://ws.apps.miamioh.edu/api/"; // API URL
 const termAPI = "academicTerm/v2?numOfFutureTerms=2&numOfPastTerms=2"; // API to get Terms
-const curCourses =
-  "courseSection/v3/courseSection?campusCode=O&limit=20&termCode="; // API to get Courses
+const curCourses = "courseSection/v3/courseSection?limit=20&termCode="; // API to get Courses
 const crnCourses = "courseSection/v3/courseSection?crn="; // API to get Courses from CRN
 const composeObjects =
-  "&compose=%2Cschedules%2Cinstructors%2Cattributes%2CcrossListedCourseSections%2CenrollmentDistribution";
+  "&compose=%2Cschedules%2Cinstructors%2Cattributes%2CcrossListedCourseSections%2CenrollmentCount";
+
+import { getItem } from "../storage/preferences";
 
 /**
  * Get the department data.
@@ -24,6 +24,8 @@ const getDeptData = async (
   offset = 0
 ): Promise<[boolean, Course[]]> => {
   const courses: Course[] = new Array<Course>();
+  const campus = await getItem("campus");
+  console.log(campus);
   // Get the course data from the API
   const apiURL =
     url +
@@ -32,12 +34,13 @@ const getDeptData = async (
     (offset === 0 ? "" : "&offset=" + (offset * 20 + 1)) +
     composeObjects +
     "&course_subjectCode=" +
-    dept;
+    dept +
+    "&campusCode=" +
+    campus;
   const courseData = await fetch(apiURL);
   // Convert to JSON
   const courseJson = await courseData.json();
   for (let course of courseJson.data) {
-    console.log(course);
     let formatted = formatCourse(course);
     if (formatted != null) {
       courses.push(formatted);
@@ -46,16 +49,22 @@ const getDeptData = async (
   return [courseJson.data.length == 20, courses];
 };
 
-const getCourseFromCRN = async (term: string, crn: string): Promise<Course> => {
-  const apiURL = url + crnCourses + crn + "&termCode=" + term + composeObjects;
+const getCourseFromCRN = async (
+  term: number,
+  crns: string[]
+): Promise<Course[]> => {
+  const apiURL =
+    url + crnCourses + crns.join("%2C") + "&termCode=" + term + composeObjects;
   const courseData = await fetch(apiURL);
   const courseJson = await courseData.json();
-  const course = courseJson.data[0];
-  const formatted = formatCourse(course);
-  if (formatted == null) {
+  const course = courseJson.data;
+  const result = course.map((course: any) => {
+    return formatCourse(course);
+  });
+  if (result == null) {
     throw new Error("Course not found!");
   }
-  return formatted;
+  return result;
 };
 
 /**
@@ -72,6 +81,7 @@ const formatCourse = (course: {
     endTime: string;
     buildingName: string;
     buildingCode: string;
+    scheduleTypeCode: string;
   }[];
   course: {
     subjectCode: any;
@@ -79,6 +89,10 @@ const formatCourse = (course: {
     description: string;
     title: any;
     creditHoursHigh: any;
+  };
+  enrollmentCount: {
+    numberOfMax: number;
+    numberOfCurrent: number;
   };
   crn: string;
   courseSectionCode: string;
@@ -112,22 +126,22 @@ const formatCourse = (course: {
       endTime: string;
       buildingName: string;
       buildingCode: string;
+      scheduleTypeCode: string;
     }) => {
       if (time.days == null) {
         return;
       }
-      const startTime: Time = stringToTime(time.startTime);
-      const endTime: Time = stringToTime(time.endTime);
-      for (let day of time.days.split("")) {
-        const timeObj = new Schedule(
-          startTime,
-          endTime,
-          getDay(day),
-          time.buildingName,
-          time.buildingCode
-        );
-        times.push(timeObj);
+      if (time.scheduleTypeCode == "FEXM") {
+        return;
       }
+      const timeObj = new Schedule(
+        time.startTime,
+        time.endTime,
+        time.days,
+        time.buildingName,
+        time.buildingCode
+      );
+      times.push(timeObj);
     }
   );
 
@@ -141,43 +155,11 @@ const formatCourse = (course: {
     instructor,
     course.courseSectionCode,
     course.course.creditHoursHigh,
+    course.enrollmentCount.numberOfMax,
+    course.enrollmentCount.numberOfCurrent,
     times
   );
   return courseData;
-};
-
-/**
- * Convert a day string to a number
- * @param day
- * @returns number representing 0-4 for M-F
- */
-const getDay = (day: string): number => {
-  switch (day) {
-    case "M":
-      return 0;
-    case "T":
-      return 1;
-    case "W":
-      return 2;
-    case "R":
-      return 3;
-    case "F":
-      return 4;
-    default:
-      console.log("Error! Not a day:", day);
-      return -1;
-  }
-};
-
-/**
- * Convert a string to a Time object
- * Format: HH:MM
- * @param time
- * @returns Time object.
- */
-const stringToTime = (time: string): Time => {
-  const split = time.split(":");
-  return new Time(parseInt(split[0]), parseInt(split[1]));
 };
 
 const getTerm = async (): Promise<TermInfo[]> => {

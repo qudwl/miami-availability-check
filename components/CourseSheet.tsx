@@ -15,7 +15,8 @@ import {
 import Course from "../model/Course";
 import { Accordion } from "tamagui";
 import { ChevronDown } from "@tamagui/lucide-icons";
-import { insertCourse } from "../storage/sqlite";
+import { insertCourse, seeIfCourseIsSaved } from "../storage/sqlite";
+import { useEffect } from "react";
 
 const days: string[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -23,19 +24,29 @@ type Props = {
   course: Course | null;
   open: boolean;
   setOpen: (open: boolean) => void;
+  action: { label: string; onPress: (course: Course) => void };
 };
-const CourseSheet = ({ course, open, setOpen }: Props) => {
-  const addCourseToDatabase = () => {
+const CourseSheet = ({ course, open, setOpen, action }: Props) => {
+  const buttonAction = () => {
     try {
-      insertCourse(course);
-      console.log("Course added to database.");
+      if (course != null) action.onPress(course);
       setTimeout(() => {
         setOpen(false);
-      }, 1000);
+      }, 100);
     } catch (error) {
       console.log(error);
     }
   };
+
+  useEffect(() => {
+    seeIfCourseIsSaved(course?.crn ?? 0).then((res) => {
+      if (res) {
+        action.label = "Remove Course";
+      } else {
+        action.label = "Add Course";
+      }
+    });
+  }, []);
 
   return (
     <Sheet open={open} onOpenChange={setOpen} modal dismissOnSnapToBottom>
@@ -51,21 +62,18 @@ const CourseSheet = ({ course, open, setOpen }: Props) => {
               >{`${course?.subject} ${course?.cid} ${course?.section}`}</H4>
               <H2 textAlign="center">{course?.title}</H2>
               <Paragraph textAlign="center" theme="alt2">
-                {course?.credits} Hours | {course?.instructors}
+                {course?.credits} Hours | {course?.instructor}
               </Paragraph>
             </YStack>
-            <XStack space>
-              <Button theme="active" onPress={addCourseToDatabase}>
-                Add Course
-              </Button>
-              <Button>See other sections</Button>
-            </XStack>
+            <Button theme="active" onPress={buttonAction}>
+              {action?.label ?? ""}
+            </Button>
           </YStack>
           <Accordion
             defaultValue={["description"]}
             overflow="hidden"
             width="100%"
-            collapsible
+            type="multiple"
           >
             <Accordion.Item value="description">
               <Accordion.Trigger
@@ -105,9 +113,7 @@ const CourseSheet = ({ course, open, setOpen }: Props) => {
                   return (
                     <XStack justifyContent="space-between" key={index}>
                       <Paragraph>
-                        {`${days[time.day]} ${time.start.time}-${
-                          time.end.time
-                        }`}
+                        {`${time.day} ${time.start}-${time.end}`}
                       </Paragraph>
                       <Paragraph>{time.buildingName}</Paragraph>
                     </XStack>

@@ -1,15 +1,13 @@
-import Time from "./Time";
-
 class Schedule {
-  start: Time;
-  end: Time;
-  day: number;
+  start: string;
+  end: string;
+  day: string;
   buildingName: string;
   buildingCode: string;
   constructor(
-    start: Time,
-    end: Time,
-    day: number,
+    start: string,
+    end: string,
+    day: string,
     buildingName: string = "",
     buildingCode: string = ""
   ) {
