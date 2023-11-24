@@ -5,6 +5,7 @@ import {
   H4,
   Label,
   Paragraph,
+  XGroup,
   XStack,
   YStack,
 } from "tamagui";
@@ -12,15 +13,19 @@ import { deleteCourse } from "../storage/sqlite";
 import useStore from "../model/store";
 import { FlatList } from "react-native-gesture-handler";
 import Course from "../model/Course";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import * as Clipboard from "expo-clipboard";
 import CourseSheet from "../components/CourseSheet";
 import { getCourseFromCRN } from "../scripts/api";
+import SaveScheduleDialog from "../components/SaveScheduleDialog";
+import LoadScheduleDialog from "../components/LoadScheduleDialog";
 
 const Schedule = () => {
   const { savedClasses, setSavedClasses, currentTerm } = useStore();
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [openSheet, setOpenSheet] = useState(false);
+  const [openSaveScheduleDialog, setOpenSaveScheduleDialog] = useState(false);
+  const [openLoadScheduleDialog, setOpenLoadScheduleDialog] = useState(false);
 
   const sheetAction = {
     label: "Delete Course",
@@ -84,14 +89,36 @@ const Schedule = () => {
     setSavedClasses(savedClasses.filter((course) => course.crn != crn));
   };
 
+  const saveBtn = () => {
+    setOpenSaveScheduleDialog(true);
+  };
+
+  const loadBtn = () => {
+    setOpenLoadScheduleDialog(true);
+  };
+
   return (
     <YStack space margin={10}>
-      <XStack justifyContent="space-between" space>
+      <YStack justifyContent="space-between" space>
         <H3>Saved Courses</H3>
-        <Button theme="active" onPress={refreshBtn}>
-          Refresh
-        </Button>
-      </XStack>
+        <XGroup size="$3">
+          <XGroup.Item>
+            <Button theme="active" onPress={refreshBtn}>
+              Refresh
+            </Button>
+          </XGroup.Item>
+          <XGroup.Item>
+            <Button theme="active" onPress={saveBtn}>
+              Save Online
+            </Button>
+          </XGroup.Item>
+          <XGroup.Item>
+            <Button theme="active" onPress={loadBtn}>
+              Load Online
+            </Button>
+          </XGroup.Item>
+        </XGroup>
+      </YStack>
       <FlatList
         data={savedClasses}
         renderItem={({ item, index }) => (
@@ -136,6 +163,14 @@ const Schedule = () => {
         setOpen={setOpenSheet}
         course={selectedCourse}
         action={sheetAction}
+      />
+      <SaveScheduleDialog
+        open={openSaveScheduleDialog}
+        setOpen={setOpenSaveScheduleDialog}
+      />
+      <LoadScheduleDialog
+        open={openLoadScheduleDialog}
+        setOpen={setOpenLoadScheduleDialog}
       />
     </YStack>
   );

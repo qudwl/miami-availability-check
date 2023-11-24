@@ -25,7 +25,6 @@ const getDeptData = async (
 ): Promise<[boolean, Course[]]> => {
   const courses: Course[] = new Array<Course>();
   const campus = await getItem("campus");
-  console.log(campus);
   // Get the course data from the API
   const apiURL =
     url +
@@ -178,4 +177,57 @@ const getTerm = async (): Promise<TermInfo[]> => {
   return terms;
 };
 
-export { getDeptData, getTerm, getCourseFromCRN };
+const saveScheduleToWeb = async (schedules: Course[], name: string) => {
+  const apiURL =
+    "https://etbd.tech/limb2_115461/wdata/putjson.php?file=" + name + ".json";
+
+  const term = await getItem("currentTerm");
+  const campus = await getItem("campus");
+
+  const data = {
+    name: name,
+    schedules: schedules,
+    term: term,
+    campus: campus,
+  };
+
+  await fetch(apiURL, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+    body: JSON.stringify(data),
+    mode: "no-cors",
+    cache: "no-cache",
+  });
+
+  console.log("Success?");
+
+  return true;
+};
+
+const loadScheduleFromWeb = async (name: string) => {
+  const apiURL =
+    "https://etbd.tech/limb2_115461/wdata/getjson.php?file=" + name + ".json";
+
+  const data = await fetch(apiURL, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "GET",
+    mode: "no-cors",
+    cache: "no-cache",
+  });
+
+  const json = await data.json();
+
+  return json;
+};
+
+export {
+  getDeptData,
+  getTerm,
+  getCourseFromCRN,
+  saveScheduleToWeb,
+  loadScheduleFromWeb,
+};
